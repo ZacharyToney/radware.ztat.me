@@ -74,6 +74,26 @@ stored credential becomes unreadable, including the Radware keys.
 
 ## 5. Start
 
+**Confirm 80 and 443 are actually open before starting Caddy.** `ufw` allowing
+them is not enough; the EC2 security group is a separate control, and a rule
+missing there is invisible from inside the box. Check from somewhere else:
+
+```bash
+nc -zv radware.ztat.me 80 443
+```
+
+If they are closed, bring up everything except Caddy first. Caddy requests a
+certificate the moment it starts, and ACME failures against an unreachable host
+count toward a Let's Encrypt rate limit measured in hours:
+
+```bash
+cd deploy
+docker compose up -d --build postgres n8n     # ports still closed
+docker compose up -d caddy                    # once 80 and 443 are open
+```
+
+With the ports open from the start, one command does it:
+
 ```bash
 cd deploy
 docker compose up -d --build
