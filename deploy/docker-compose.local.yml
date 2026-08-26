@@ -1,0 +1,29 @@
+# Local override: no Caddy, no TLS, stock n8n image with the guard node
+# bind-mounted from the build output so a rebuild is `pnpm build`, not a Docker
+# image build. Production uses the baked image instead.
+#
+#   pnpm --filter @ztat/n8n-nodes-radware-guard build
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+#
+name: radware-n8n-lab-local
+
+services:
+  caddy:
+    profiles: ["disabled"]
+
+  n8n:
+    build: !reset null
+    image: n8nio/n8n:2.36.7
+    environment:
+      N8N_HOST: localhost
+      N8N_PROTOCOL: http
+      N8N_WEBHOOK_URL: http://localhost:5678/
+      N8N_EDITOR_BASE_URL: http://localhost:5678/
+      N8N_SECURE_COOKIE: "false"
+      N8N_PROXY_HOPS: "0"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ../packages/radware-guard/dist:/opt/custom-nodes/radware-guard/dist:ro
+      - ../packages/radware-guard/package.json:/opt/custom-nodes/radware-guard/package.json:ro
+    ports:
+      - "127.0.0.1:5678:5678"

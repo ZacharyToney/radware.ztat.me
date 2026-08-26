@@ -1,0 +1,34 @@
+{
+	email {$LETSENCRYPT_EMAIL}
+	# rate_limit ships in the mholt/caddy-ratelimit plugin, which is not a
+	# standard directive, so its position in the handler chain must be declared.
+	order rate_limit before basicauth
+}
+
+{$N8N_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "SAMEORIGIN"
+		-Server
+	}
+
+	# Everything else on this host sits behind the n8n owner login. These paths
+	# do not: the chat trigger and webhooks are reachable by anyone with the
+	# link, which is the point of a clickable demo and also its whole exposure.
+	# 20 requests per minute per source address is generous for a human trying
+	# the demo and useless for anyone trying to burn model spend.
+	@public path /webhook/* /webhook-test/* /chat/*
+	rate_limit @public {
+		zone public_surface {
+			key {remote_host}
+			events 20
+			window 1m
+		}
+	}
+
+	reverse_proxy n8n:5678
+}

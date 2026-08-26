@@ -13,6 +13,10 @@
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "mock": "node scripts/mock-digester.mjs",
-    "validate:live": "node scripts/validate-live.mjs"
+    "validate:live": "node scripts/validate-live.mjs",
+    "hash-password": "node scripts/hash-password.mjs"
+  },
+  "devDependencies": {
+    "bcryptjs": "^3.0.3"
   }
 }

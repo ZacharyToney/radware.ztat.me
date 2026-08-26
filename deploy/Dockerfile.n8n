@@ -1,0 +1,32 @@
+# n8n with the out-of-path guard node baked in.
+#
+# The node is compiled here rather than on the host so the deployment box needs
+# no Node toolchain, and so the running image is a single reproducible artifact
+# that can be scanned and rolled back. Local development bind-mounts the build
+# output instead; see docker-compose.local.yml.
+#
+# Build context is the repository root, not deploy/.
+
+FROM node:24-alpine AS build
+WORKDIR /build
+
+RUN corepack enable
+
+# Copy manifests first so dependency installation caches independently of source.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY packages/radware-guard/package.json packages/radware-guard/
+
+RUN pnpm install --frozen-lockfile --filter @ztat/n8n-nodes-radware-guard...
+
+COPY packages/radware-guard packages/radware-guard
+
+RUN pnpm --filter @ztat/n8n-nodes-radware-guard run build \
+ && pnpm --filter @ztat/n8n-nodes-radware-guard run test
+
+
+FROM n8nio/n8n:2.36.7
+
+USER root
+COPY --from=build --chown=node:node /build/packages/radware-guard/dist /opt/custom-nodes/radware-guard/dist
+COPY --from=build --chown=node:node /build/packages/radware-guard/package.json /opt/custom-nodes/radware-guard/package.json
+USER node

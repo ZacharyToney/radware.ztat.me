@@ -1,0 +1,135 @@
+name: radware-n8n-lab
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  caddy:
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      N8N_DOMAIN: ${N8N_DOMAIN:?set N8N_DOMAIN in .env}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:?set LETSENCRYPT_EMAIL in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - n8n
+    mem_limit: 128m
+    logging: *logging
+
+  postgres:
+    image: postgres:16.15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Never published. n8n reaches it on the compose network only.
+    expose:
+      - "5432"
+    mem_limit: 384m
+    logging: *logging
+
+  n8n:
+    # Stock n8n plus the compiled guard node. See Dockerfile.n8n.
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.n8n
+    image: radware-n8n-lab/n8n:2.36.7
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # --- database ---
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: "5432"
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      # --- public identity, behind the reverse proxy ---
+      N8N_HOST: ${N8N_DOMAIN}
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: https
+      N8N_WEBHOOK_URL: https://${N8N_DOMAIN}/
+      N8N_EDITOR_BASE_URL: https://${N8N_DOMAIN}/
+      N8N_PROXY_HOPS: "1"
+      N8N_SECURE_COOKIE: "true"
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-UTC}
+
+      # --- secrets at rest ---
+      # Encrypts stored credentials. Back it up: lose it and every saved
+      # credential in the database becomes unreadable.
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY in .env}
+
+      # --- hardening ---
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "true"
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      # n8n is tightening these three defaults in a future release. Adopting the
+      # stricter values now, rather than pinning today's looser ones, keeps an
+      # internet-facing box from being the place we discover the difference.
+      N8N_RUNNERS_TASK_TIMEOUT: "60"
+      N8N_COMPRESSION_NODE_MAX_DECOMPRESSED_SIZE_BYTES: "268435456"
+      N8N_COMPRESSION_NODE_MAX_ZIP_ENTRIES: "1000"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+
+      # Keeps execution history from filling a 30 GB disk unattended.
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: "168"
+
+      # --- Radware in-path node, pinned in config rather than clicked in the UI ---
+      # The published guide's install screenshot shows the unscoped package name,
+      # which resolves to a different and older package. Declaring the scoped
+      # name and an exact version here removes that ambiguity entirely.
+      N8N_COMMUNITY_PACKAGES_ENABLED: "true"
+      N8N_COMMUNITY_PACKAGES_MANAGED_BY_ENV: "true"
+      N8N_COMMUNITY_PACKAGES: '[{"name":"@radware/n8n-nodes-radware-agentic-protection","version":"0.3.2"}]'
+      N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE: "true"
+      # n8n warns that this defaults to false in a future version. The Radware
+      # package is not in n8n's verified registry yet, so leaving this implicit
+      # would let a routine n8n upgrade silently uninstall it.
+      N8N_UNVERIFIED_PACKAGES_ENABLED: "true"
+
+      # --- our out-of-path guard node, mounted from the build output ---
+      N8N_CUSTOM_EXTENSIONS: /opt/custom-nodes
+
+      # --- declarative owner, so first boot needs no setup wizard ---
+      N8N_INSTANCE_OWNER_MANAGED_BY_ENV: "true"
+      N8N_INSTANCE_OWNER_EMAIL: ${N8N_INSTANCE_OWNER_EMAIL:?set N8N_INSTANCE_OWNER_EMAIL in .env}
+      N8N_INSTANCE_OWNER_FIRST_NAME: ${N8N_INSTANCE_OWNER_FIRST_NAME:-Radware}
+      N8N_INSTANCE_OWNER_LAST_NAME: ${N8N_INSTANCE_OWNER_LAST_NAME:-Lab}
+      N8N_INSTANCE_OWNER_PASSWORD_HASH: ${N8N_INSTANCE_OWNER_PASSWORD_HASH:?set N8N_INSTANCE_OWNER_PASSWORD_HASH in .env}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    # Not published. Caddy is the only way in.
+    expose:
+      - "5678"
+    mem_limit: 1200m
+    logging: *logging
+
+volumes:
+  caddy_data:
+  caddy_config:
+  pg_data:
+  n8n_data:

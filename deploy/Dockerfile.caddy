@@ -1,0 +1,7 @@
+# Rate limiting is not in stock Caddy. Build it in rather than leave the public
+# chat endpoint unthrottled.
+FROM caddy:2.11.4-builder AS builder
+RUN xcaddy build --with github.com/mholt/caddy-ratelimit
+
+FROM caddy:2.11.4-alpine
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy
