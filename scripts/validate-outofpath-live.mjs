@@ -207,17 +207,30 @@ try {
 	for (const testCase of CASES) {
 		process.stdout.write(`  ${testCase.id.padEnd(32)}`);
 		let outcome;
+		const t0 = Date.now();
 		try {
 			outcome = await run(testCase);
 		} catch (error) {
 			outcome = { actual: 'error', guard: null, error: error.message };
 		}
+		const elapsed = Date.now() - t0;
 		const pass = outcome.actual === testCase.expected;
 		results.push({ ...testCase, ...outcome, pass });
 		const decided = outcome.guard?.decidedBy ?? '-';
+		const extra = outcome.guard?.eventId
+			? `  event=${outcome.guard.eventId}`
+			: outcome.guard?.reason
+				? `  reason="${outcome.guard.reason}"`
+				: outcome.error
+					? `  error="${outcome.error}"`
+					: '';
 		console.log(
-			`${outcome.actual.padEnd(9)} (expected ${testCase.expected.padEnd(7)}) ${pass ? 'PASS' : 'FAIL'}  decidedBy=${decided}${outcome.guard?.eventId ? `  event=${outcome.guard.eventId}` : ''}`,
+			`${outcome.actual.padEnd(9)} (expected ${testCase.expected.padEnd(7)}) ${pass ? 'PASS' : 'FAIL'}  ${String(elapsed).padStart(6)}ms  decidedBy=${decided}${extra}`,
 		);
+		// The service is doing content inspection, not a table lookup. Firing the
+		// whole matrix at it back to back is not how a real agent behaves and
+		// invites throttling that would be misread as latency.
+		await new Promise((r) => setTimeout(r, 2000));
 	}
 } finally {
 	if (workflowId) {
@@ -233,10 +246,14 @@ const passed = results.filter((r) => r.pass).length;
 
 const date = new Date().toISOString().slice(0, 10);
 const rows = results
-	.map(
-		(r) =>
-			`| out-of-path | ${r.id} | ${r.expected} | ${r.actual} | ${r.module || (r.guard?.decidedBy === 'radware' ? 'Radware decision' : r.guard?.decidedBy ?? '')} | ${r.guard?.eventId ?? ''} | ${r.pass ? 'PASS' : 'FAIL'} |`,
-	)
+	.map((r) => {
+		const module =
+			r.guard?.decidedBy === 'radware'
+				? r.module || 'Radware decision'
+				: `${r.guard?.decidedBy ?? 'n/a'}: ${r.guard?.reason ?? r.error ?? 'unknown'}`;
+		const status = r.guard?.decidedBy === 'radware' ? (r.pass ? 'PASS' : 'FAIL') : 'INCONCLUSIVE';
+		return `| out-of-path | ${r.id} | ${r.expected} | ${r.actual} | ${module} | ${r.guard?.eventId ?? ''} | ${status} |`;
+	})
 	.join('\n');
 
 const report = `# n8n Radware Agentic AI Protection Validation (out-of-path)

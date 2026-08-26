@@ -102,7 +102,7 @@ guide is explicit: behavioural detection needs the full advertised tool set. A
 send in isolation is ordinary. A send that follows a read, in a session where
 both were available, is the shape of exfiltration.
 
-## Fail mode
+## Fail mode, and why it carries more weight than it should
 
 Set per node, not per credential, because it is a per-tool decision.
 
@@ -113,6 +113,28 @@ Set per node, not per credential, because it is a per-tool decision.
 
 Choosing this per tool is the whole reason it is a node parameter rather than a
 credential setting: it is visible on the canvas, where a reviewer can see it.
+
+**The latency measurements make this setting more load-bearing than it looks.**
+The same call to the protection service has been observed taking 165 ms and
+71 seconds on this tenant, minutes apart, with near-identical payloads. Full
+numbers in finding 9.
+
+There is no timeout that is both responsive and safe against that spread, so the
+timeout stops being a tuning knob and becomes a coin flip whose outcome the fail
+mode decides. Practical consequences:
+
+- The default timeout is 60 seconds. That is not "we measured p99 and added
+  headroom", it is "we could not find a defensible smaller number".
+- A guarded tool can stall an agent for a minute. On a chat-facing agent that is
+  a visible hang, and n8n's own task runner timeout default is moving to 60
+  seconds, so a long check can outlive the task running it.
+- `failClose` on a slow service silently converts availability problems into
+  blocks. Always read `decidedBy` before treating a block as protection.
+
+If you are wiring this in front of a high-traffic or latency-sensitive tool,
+measure against your own tenant first, and consider whether `failOpen` plus
+alerting is more honest than a fail-close that fires on timeouts more often than
+on threats. That is a real trade-off and it should be made deliberately.
 
 ## What this node deliberately does not do
 

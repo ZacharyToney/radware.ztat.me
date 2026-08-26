@@ -195,6 +195,11 @@ Stated because a security audience will find them anyway.
   counting it as a pass.
 - **`t3.small` is 2 GB.** It runs this comfortably with the configured swap and
   memory limits, and would not run a real workload.
+- **Out-of-path decision latency is wildly variable**, measured from 165 ms to
+  71 s on one tenant. The guard's timeout default is 60 s as a result, which
+  means a guarded tool can stall an agent for a minute. This is the single
+  biggest obstacle to using out-of-path enforcement in line, and it is a
+  property of the service rather than of this node. See finding 9.
 
 ## Feedback for Radware
 

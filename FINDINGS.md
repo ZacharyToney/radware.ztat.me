@@ -241,3 +241,85 @@ agent. Set Custom Provider and API Key in the Agentic AI Protection portal."}`.
 state plainly that in-path requires the customer's own provider API key entered
 in the portal, and that out-of-path does not. That difference is currently
 visible only in a screenshot of the creation form.
+
+## 9. Out-of-path decision latency spans three orders of magnitude
+
+**Severity: high for anyone deploying it in line. This is the finding that most
+affects how the product can be used.**
+
+Measured against `POST /llmp/digester/agentic-api` on one tenant, from one host,
+over roughly thirty minutes:
+
+| Call | Observed |
+| --- | --- |
+| Prompt only, no tools advertised | 165 ms, 330 ms |
+| Tool call, no retrieved context | 1.6 s, 2.3 s, 3.0 s, 7.1 s |
+| Tool call, retrieved context | 3.6 s, 4.8 s, 9.2 s, 13.9 s, 20.4 s |
+| Guardrail prompts | 18.7 s, 20.6 s, 23.7 s, 25.3 s, 35.6 s |
+| Benign send, single tool advertised | **71.5 s** |
+
+Same endpoint, same key, same tenant. The 71.5-second call and the 2.3-second
+call carried near-identical payloads.
+
+This is not a complaint about speed. Content inspection is expected to cost
+more than a rule lookup. The problem is the **spread**, because an out-of-path
+guard is synchronous and must choose a timeout:
+
+- Pick a responsive timeout and the guard fails closed on healthy traffic. At
+  5 s, our first live run produced six blocks and zero Radware decisions. Under
+  a fail-close policy those are indistinguishable from real blocks, which is
+  exactly the trap in finding 5.
+- Pick a safe timeout and every guarded tool call may stall the agent for over a
+  minute, and n8n's own task runner default is being reduced to 60 s.
+
+There is no value that is both. We settled on 60 s and treat the fail mode as
+the real control, but that is a compromise, not a solution.
+
+**Suggested fixes, in order of usefulness:**
+
+1. **Publish a latency SLO** for the endpoint, even a loose one. Integrators
+   cannot choose a timeout without it, and are currently choosing by guessing.
+2. **Return a decision id immediately and allow polling**, so a slow inspection
+   does not have to be an open socket.
+3. **Document the p50 and p99** in the User Guide's out-of-path section next to
+   the failopen/failclose choice, since those two settings are the only lever a
+   customer has and their consequences depend entirely on this distribution.
+
+## 10. A benign action is blocked whenever tools are advertised
+
+**Severity: medium, and I would like to be told I am wrong about this.**
+
+Reproduced on this tenant. Identical benign tool call throughout: reply to the
+sender of an innocuous support email, confirming a ticket was closed. No
+sensitive data, no external recipient, no injected content anywhere in the
+payload. The only variable is `ToolsInput`.
+
+| `ToolsInput` | Result | n |
+| --- | --- | --- |
+| `[]` | **allowed** | 3 of 3 |
+| `[send_email]` | blocked | 1 of 1 |
+| `[read_email, send_email]` | blocked | 2 of 2 |
+
+Event IDs for the blocks: `ZACH-Agent-1787767167-0af00y`,
+`ZACH-Agent-1787767185-csfn9a`, `ZACH-Agent-1787767261-fbicde`.
+
+The tension is with Radware's own guidance. `docs/validation.md` says:
+
+> Do not validate Behavioral with only the outbound action tool in the `tools`
+> array; the full tool context is needed to reproduce the intended agent
+> behavior.
+
+That is sound advice, and following it appears to be what flips this benign
+action from allow to block. An integrator who omits `ToolsInput` gets clean
+allows and weakened detection; one who includes it, as instructed, gets blocks
+on ordinary traffic.
+
+**Caveats, stated because they matter:** this is one tenant, with Behavior Data
+Leakage Prevention set to Block and Report and no custom guardrail template
+attached. Small sample. It is entirely possible this is the configured policy
+behaving exactly as designed, and that a tuned template resolves it.
+
+**What would settle it:** confirmation of whether advertised-tool presence is
+intended to weigh toward blocking independently of the action's content, and if
+so, a note in the validation guidance so integrators expect it. If it is not
+intended, the three Event IDs above should be enough to trace.
