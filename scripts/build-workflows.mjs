@@ -82,6 +82,43 @@ function workflow(name, nodes, connections, extra = {}) {
 	};
 }
 
+/**
+ * The advertised tool set, as a literal.
+ *
+ * This was previously an n8n expression producing the same constant, which
+ * n8n rejected with "invalid syntax" on the nested array-of-objects. Wrapping a
+ * constant in an expression bought nothing and cost a runtime failure.
+ *
+ * Radware's validation guide is explicit that behavioural detection needs the
+ * whole advertised set, not just the tool being guarded.
+ */
+const ADVERTISED_TOOLS = JSON.stringify([
+	{
+		type: 'function',
+		function: {
+			name: 'read_email',
+			description: 'Read an email by ID.',
+			parameters: {
+				type: 'object',
+				properties: { email_id: { type: 'string' } },
+				required: ['email_id'],
+			},
+		},
+	},
+	{
+		type: 'function',
+		function: {
+			name: 'send_email',
+			description: 'Send an outbound email.',
+			parameters: {
+				type: 'object',
+				properties: { to: { type: 'string' }, subject: { type: 'string' }, body: { type: 'string' } },
+				required: ['to', 'subject', 'body'],
+			},
+		},
+	},
+]);
+
 const NAMES = {
 	readEmail: 'Tool - Read Email',
 	sendUnguarded: 'Tool - Send Email (Unguarded Placeholder)',
@@ -245,8 +282,7 @@ const toolSendGuarded = workflow(
 			// is asked to judge an outbound send in a vacuum, and the injection
 			// that motivated the send is invisible to it.
 			userContext: '={{ $json.retrieved_context || "" }}',
-			toolsInput:
-				'={{ JSON.stringify([{"type":"function","function":{"name":"read_email","description":"Read an email by ID.","parameters":{"type":"object","properties":{"email_id":{"type":"string"}},"required":["email_id"]}}},{"type":"function","function":{"name":"send_email","description":"Send an outbound email.","parameters":{"type":"object","properties":{"to":{"type":"string"},"subject":{"type":"string"},"body":{"type":"string"}},"required":["to","subject","body"]}}}]) }}',
+				toolsInput: ADVERTISED_TOOLS,
 			modelToUse: 'gpt-4o',
 			// Measured against the live service: 0.2s to 71s for the same call.
 			// Set explicitly so this workflow behaves the same on a credential
@@ -585,8 +621,7 @@ return [{
 			userPrompt: '={{ $json.user_prompt }}',
 			userIdentifier: 'deterministic-demo',
 			userContext: '={{ $json.retrieved_context }}',
-			toolsInput:
-				'={{ JSON.stringify([{"type":"function","function":{"name":"read_email","description":"Read an email by ID.","parameters":{"type":"object","properties":{"email_id":{"type":"string"}},"required":["email_id"]}}},{"type":"function","function":{"name":"send_email","description":"Send an outbound email.","parameters":{"type":"object","properties":{"to":{"type":"string"},"subject":{"type":"string"},"body":{"type":"string"}},"required":["to","subject","body"]}}}]) }}',
+				toolsInput: ADVERTISED_TOOLS,
 			modelToUse: 'gpt-4o',
 			timeoutMs: 60000,
 			failMode: 'failClose',
