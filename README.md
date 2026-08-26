@@ -4,8 +4,18 @@ A self-hosted n8n instance running Radware Agentic AI Protection in **both**
 enforcement modes, with the workflows, the evidence, and a custom node that
 fills the gap Radware's own documentation identifies.
 
-**Live:** https://radware.ztat.me
-**Built against:** `@radware/n8n-nodes-radware-agentic-protection@0.3.2`, n8n 2.36.7
+**Try it:** https://radware.ztat.me/webhook/7b3f1c62-9d84-4a1e-8c57-2f0a6d5e4b19/chat
+**Editor:** https://radware.ztat.me
+**Built against:** `@radware/n8n-nodes-radware-agentic-protection@0.3.2`, n8n 2.36.7, Anthropic Claude Sonnet 4.6
+
+> **A note on the chat demo.** A capable model often refuses an injected email
+> on its own, so the agent finishes and Radware is never consulted. That is a
+> good outcome in production and a useless demonstration, and it is the
+> provider-flow limitation Radware's own validation guide describes. To see
+> Radware decide rather than the model, run `Out-of-Path 3 - Deterministic
+> Radware Block` in the editor: one click, no model involved, a real Event ID.
+> Most recent run: `BLOCKED`, `decidedBy: radware`,
+> `ZACH-Agent-1787770452-8f3zw1`.
 
 ---
 
@@ -94,7 +104,8 @@ a reviewer can skip.
 | `02-tool-send-email-guarded` | Same placeholder behind `Radware Guard`, fail mode `failClose`. |
 | `03-tool-delete-record-unguarded` | Deliberately unguarded. Demonstrates the coverage boundary instead of describing it. |
 | **`10-outofpath-guarded-chat-agent`** | **The deliverable.** Live chat agent, provider model direct, Radware called at the tool boundary. |
-| `11-outofpath-tool-misuse` | Deterministic validation. Guarded `send_email` beside unguarded `delete_record`, on purpose. |
+| `11-outofpath-tool-misuse` | Full agent run. Guarded `send_email` beside unguarded `delete_record`, on purpose. |
+| **`12-outofpath-deterministic-block`** | **The evidence.** Feeds the guard the tool call the injection wants, with no model in the loop. Click Execute, get a real verdict and Event ID. |
 | `90-reference-inpath-chat-agent` | The vendor's in-path pattern, for comparison. Not the deliverable. |
 | `91-reference-inpath-tool-misuse` | In-path behavioural test. Not exercised; see finding 8. |
 
