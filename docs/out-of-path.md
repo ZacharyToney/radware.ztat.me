@@ -60,6 +60,36 @@ and a tool can be invoked through a path the model endpoint never sees. Running
 both means neither gap is the only thing standing between an injection and an
 outbound send.
 
+## Why not n8n's built-in human-in-the-loop?
+
+Worth answering before someone asks. n8n 2.6.0 added human-in-the-loop for AI
+tool calls: an agent can be made to pause and wait for explicit approval before
+executing a nominated tool. On the surface that solves the same problem this
+node does, and on a single high-stakes tool it may genuinely be the better
+answer.
+
+They are not substitutes, because they ask different questions.
+
+| | n8n human-in-the-loop | Radware Guard |
+| --- | --- | --- |
+| Who decides | a person | a policy engine |
+| Scales to | the volume a person will actually read | any volume |
+| Latency | as long as the person takes | 0.2s to 71s, measured |
+| Fails toward | waiting forever | the configured fail mode |
+| Produces | an approval | a decision plus an auditable Event ID |
+| Sees | what the workflow shows the approver | prompt, context, args, and the full advertised tool set |
+
+The failure mode of human approval is well known and it is not refusal: it is
+**rubber-stamping**. An approver shown fifty prompts an hour stops reading them,
+and an indirect injection is specifically designed to look ordinary to a human
+skimming. The exfiltration email in `fixtures/` is a plausible HR notice; the
+hostile part is one paragraph among six.
+
+The honest combination for a high-impact tool is both: policy enforcement that
+never gets tired, and a person for the residue that policy is not confident
+about. n8n's approval gate composes with this node rather than replacing it,
+because the guard's two outputs are ordinary branches.
+
 ## The node
 
 `Radware Guard` takes one tool call and returns a verdict.
