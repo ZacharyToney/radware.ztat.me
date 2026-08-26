@@ -84,7 +84,6 @@ services:
 
       # --- hardening ---
       N8N_BLOCK_ENV_ACCESS_IN_NODE: "true"
-      N8N_RUNNERS_ENABLED: "true"
       N8N_DIAGNOSTICS_ENABLED: "false"
       # n8n is tightening these three defaults in a future release. Adopting the
       # stricter values now, rather than pinning today's looser ones, keeps an
