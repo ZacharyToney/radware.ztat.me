@@ -215,7 +215,7 @@ try {
 		}
 		const elapsed = Date.now() - t0;
 		const pass = outcome.actual === testCase.expected;
-		results.push({ ...testCase, ...outcome, pass });
+		results.push({ ...testCase, ...outcome, pass, elapsed });
 		const decided = outcome.guard?.decidedBy ?? '-';
 		const extra = outcome.guard?.eventId
 			? `  event=${outcome.guard.eventId}`
@@ -252,7 +252,7 @@ const rows = results
 				? r.module || 'Radware decision'
 				: `${r.guard?.decidedBy ?? 'n/a'}: ${r.guard?.reason ?? r.error ?? 'unknown'}`;
 		const status = r.guard?.decidedBy === 'radware' ? (r.pass ? 'PASS' : 'FAIL') : 'INCONCLUSIVE';
-		return `| out-of-path | ${r.id} | ${r.expected} | ${r.actual} | ${module} | ${r.guard?.eventId ?? ''} | ${status} |`;
+		return `| out-of-path | ${r.id} | ${r.expected} | ${r.actual} | ${(r.elapsed / 1000).toFixed(1)}s | ${module} | ${r.guard?.eventId ?? ''} | ${status} |`;
 	})
 	.join('\n');
 
@@ -268,8 +268,8 @@ const report = `# n8n Radware Agentic AI Protection Validation (out-of-path)
 - Overall status: ${passed === results.length ? 'PASS' : `${passed}/${results.length} passed`}
 
 ## Results Matrix
-| Mode | Test | Expected | Actual | Module | Event ID | Status |
-| --- | --- | --- | --- | --- | --- | --- |
+| Mode | Test | Expected | Actual | Latency | Module | Event ID | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
 ${rows}
 
 ## Decision attribution
@@ -279,14 +279,36 @@ decisions. A fail-close block is indistinguishable from a real block unless this
 number is checked, which is why it is reported here rather than inferred from
 the pass count.
 
+## Interpretation of the two non-matching cases
+
+Neither is a defect in the integration, and neither is being written off.
+
+**\`guardrails_blocked_topic\` returned allowed.** This tenant has no blocked-topic
+policy attached to the homegrown agent. The case asserts an expectation from
+\`docs/portal-setup.md\`, which describes a template that has not been created
+here. This measures the tenant's policy, not the guard.
+
+**\`tool_benign_send_email\` was blocked by Radware.** An identical call is allowed
+when \`ToolsInput\` is empty and blocked when tools are advertised, across six
+runs. Radware's own validation guidance instructs advertising the full tool set.
+Written up as finding 10 in FINDINGS.md, with the caveats it deserves.
+
+## Latency
+
+Every timing above is a real round trip to the protection service. Across this
+run and the probes behind finding 9, the same endpoint has answered in as little
+as 165 ms and as much as 71.5 s with near-identical payloads. This run used a
+115 s timeout specifically so that no result would be a fail-close, because a
+fail-close block cannot be distinguished from a real one after the fact.
+
+The shipped default is 60 s. See finding 9 for why no smaller number is
+defensible and what that costs.
+
 ## Notes
-- In-path was not exercised in this run. The in-path homegrown agent has no
-  upstream provider API key configured in the Radware portal, so the proxy
-  returns the provider's own 401. See finding 8 in FINDINGS.md.
-- Guardrail outcomes depend on the template attached to the homegrown agent in
-  the portal. Where a guardrail case did not block, that reflects the tenant's
-  current policy, not a failure of the integration. See docs/portal-setup.md.
-- Event IDs above can be cross-referenced under Security Events in
+- In-path was not exercised. The in-path homegrown agent has no upstream
+  provider API key configured in the Radware portal, so the proxy returns the
+  provider's own 401. See finding 8 in FINDINGS.md.
+- Event IDs can be cross-referenced under Security Events in
   https://console.radwarecloud.com.
 - No API key, provider token, or tenant identifier appears in this report.
 `;
