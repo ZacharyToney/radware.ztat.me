@@ -1,19 +1,26 @@
+# Start from gitleaks' built-in rules and only add allowlisting on top.
+#
+# No [[rules]] block here on purpose. An earlier version carried a dummy rule
+# with the regex `$^`, added on the assumption that a config needs at least one
+# rule and that `$^` matches nothing. Neither was true: the config is valid
+# without any rules, and that regex matched real source lines, so CI failed on
+# two files that contain no secrets. A scanner that cries wolf gets ignored,
+# which is worse than not running it.
 [extend]
 useDefault = true
 
-# The fixtures exist to trip detection. They contain the published Visa test PAN
-# and an obviously-fake Radware key shape, both on purpose, and both documented
-# in fixtures/README.md. Allowlisting the paths rather than the patterns keeps
-# the rules live everywhere else in the repo.
-[[rules]]
-id = "placeholder"
-description = "placeholder so [[rules]] is valid when only allowlists are needed"
-regex = '''$^'''
-
 [allowlist]
-description = "Labeled, inert test material"
+description = """
+Labeled, inert test material. These paths contain attack-shaped content on
+purpose: the published Visa test PAN, a fake Radware key shape, and an env
+template with empty values. All documented in fixtures/README.md and SECURITY.md.
+Allowlisting the paths rather than the patterns keeps every rule live everywhere
+else in the repository.
+"""
 paths = [
   '''fixtures/.*''',
   '''packages/radware-guard/tests/.*''',
   '''deploy/\.env\.example''',
+  '''scripts/check-radware-key\.mjs''',
+  '''scripts/verify-guard-in-n8n\.mjs''',
 ]
