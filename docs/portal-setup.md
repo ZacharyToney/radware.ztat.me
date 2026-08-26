@@ -3,16 +3,45 @@
 What to create at https://console.radwarecloud.com before any of this runs.
 Follows the *Radware Agentic AI Protection User Guide 26.03.1*, chapter 1.
 
-## Two agents, not one
+## One key may cover both modes
 
 Integration Options is a radio button: **Out-of-Path Enforcement** *or* **In-Path
-Enforcement**. One homegrown agent is one mode. This lab uses both, so it needs
-two homegrown agents and two API keys.
+Enforcement**. That choice governs how the agent is configured. It does not
+necessarily scope the API key.
 
-This is easy to miss. An in-path key starting `sk-rdwr-` authenticates against
-`https://api.agentic.radwarecto.com/v1/<provider>`; it is not a given that the
-same key authorises `POST /llmp/digester/agentic-api`. If the out-of-path guard
-returns a fail-mode decision with an HTTP 401 reason, this is why.
+Measured on this tenant, with one key: the same key was accepted by
+`POST /llmp/digester/agentic-api` **and** recognised by the in-path proxy at
+`/v1/openai/*`. So do not assume you need a second homegrown agent before
+testing. Check first:
+
+```bash
+RADWARE_API_KEY='sk-rdwr-...' pnpm check:key
+```
+
+That is one key on one tenant, not a documented guarantee. If the out-of-path
+endpoint rejects your key with `radware key not found`, create a second
+homegrown agent in Out-of-Path mode and use its key.
+
+## In-path also needs a provider key, and the error will not say so
+
+An in-path homegrown agent proxies to an upstream provider **using a provider
+API key you supply in the portal**. Radware does not bring its own. If that
+field is empty, the agent still authenticates your Radware key correctly and
+then calls the provider with nothing, and what comes back is the provider's own
+error relayed through Radware:
+
+```
+HTTP 401  {"error":{"message":"Incorrect API key provided: ''", ...
+           "You can find your API key at https://platform.openai.com/..."}}
+```
+
+That message names OpenAI and points at your OpenAI account, so it reads as a
+problem with a key you may not even have. The actual fix is in the Radware
+portal: open the homegrown agent, set **Custom Provider**, and paste a provider
+API key. See finding 8 in `FINDINGS.md`.
+
+Out-of-path needs no provider key, because it returns a decision rather than
+proxying a model call. That makes it the faster of the two to get working.
 
 ## Agent 1: in-path
 

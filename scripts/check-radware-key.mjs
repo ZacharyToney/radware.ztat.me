@@ -68,10 +68,21 @@ async function probe(label, url, init) {
 
 	const ok = status >= 200 && status < 300;
 	const notFound = /key not found/i.test(body);
-	const verdict = ok ? 'ACCEPTED' : notFound ? 'KEY NOT RECOGNISED' : `HTTP ${status}`;
+	// A 401 mentioning an OpenAI-style key is the upstream provider talking, not
+	// Radware. It means Radware accepted our key and then called the provider
+	// with a credential it does not have.
+	const upstreamAuth =
+		status === 401 && /Incorrect API key provided|didn't provide an API key|platform\.openai\.com/i.test(body);
+	const verdict = ok
+		? 'ACCEPTED'
+		: notFound
+			? 'KEY NOT RECOGNISED'
+			: upstreamAuth
+				? 'RELAYED, UPSTREAM PROVIDER REJECTED'
+				: `HTTP ${status}`;
 	console.log(`  ${label.padEnd(26)} ${verdict}`);
 	if (!ok) console.log(`      ${redact(body.replace(/\s+/g, ' ')).slice(0, 200)}`);
-	return { status, body, ok, notFound };
+	return { status, body, ok, notFound, upstreamAuth };
 }
 
 console.log('In-path (bearer token in the Authorization header):');
@@ -103,15 +114,44 @@ const digester = await probe('POST digester/agentic-api', `${BASE}/llmp/digester
 console.log('\n---');
 const anyNotFound = [models, chat, digester].some((r) => r?.notFound);
 const anyOk = [models, chat, digester].some((r) => r?.ok);
+const upstreamRejected = [models, chat].some((r) => r?.upstreamAuth);
 
-if (anyNotFound && !anyOk) {
+if (digester?.ok) {
+	try {
+		const decision = JSON.parse(digester.body);
+		const keys = Object.keys(decision).join(', ');
+		console.log(`Out-of-path returned a decision: ${keys || '(empty object)'}`);
+	} catch {
+		console.log('Out-of-path returned 2xx but the body did not parse as JSON.');
+	}
+}
+
+if (upstreamRejected) {
+	console.log('');
+	console.log('Radware ACCEPTED this key. The 401 above came from the upstream provider,');
+	console.log('relayed back through Radware, and it reports an empty API key.');
+	console.log('');
+	console.log('That means the homegrown agent behind this key has no Custom Provider API');
+	console.log('Key set in the Radware portal, so Radware is calling the provider with');
+	console.log('nothing. This is a portal configuration gap, not a problem with your key,');
+	console.log('your network, or n8n.');
+	console.log('');
+	console.log('Fix: open the homegrown agent in https://console.radwarecloud.com, set');
+	console.log('Custom Provider and paste a provider API key (an OpenAI key for the');
+	console.log('"openai" segment). Radware calls the provider on your behalf using it.');
+	if (digester?.ok) {
+		console.log('');
+		console.log('Out-of-path already works with this key and needs no provider key, since');
+		console.log('it returns a decision rather than proxying a model call.');
+	}
+} else if (anyNotFound && !anyOk) {
 	console.log('Radware does not recognise this key on any endpoint.');
 	console.log('Likely causes, in order: the key was copied incompletely (the portal shows');
-	console.log('it once), the homegrown agent was deleted or recreated, or the key belongs');
-	console.log('to a different tenant. Create a new homegrown agent and copy the key again.');
+	console.log('it once), the homegrown agent was deleted or recreated, the case or');
+	console.log('whitespace is wrong, or the key belongs to a different tenant.');
 } else if (chat?.ok && !models?.ok) {
 	console.log('The key works for chat/completions but not for /models.');
-	console.log('n8n\'s in-path credential test calls /models, so it will report a failure');
+	console.log("n8n's in-path credential test calls /models, so it will report a failure");
 	console.log('for a credential that is actually fine. Save it anyway and test with a');
 	console.log('real agent run instead.');
 } else if (anyOk) {

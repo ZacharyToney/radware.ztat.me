@@ -193,3 +193,51 @@ echo the key, for example `{"message":"API key not recognised"}`.
 `scripts/check-radware-key.mjs` in this repo tests a key against all three
 endpoints and translates the 500 back into a plain answer. It reads the key from
 stdin or the environment rather than argv, and redacts it from output.
+
+## 8. An in-path agent with no provider key fails as if it were the customer's fault
+
+**Severity: medium. Sends the customer to the wrong system entirely.**
+
+An in-path homegrown agent proxies to an upstream provider using a provider API
+key supplied in the portal. When that field is empty, the agent still
+authenticates the Radware key correctly, then calls the provider with an empty
+credential. What the customer sees is the provider's error relayed verbatim:
+
+```
+GET /v1/openai/models
+HTTP 401
+{"error":{"message":"Incorrect API key provided: ''. You can find your API key
+ at https://platform.openai.com/account/api-keys.", ...}}
+```
+
+Note the empty string. Radware knows the provider key is blank at the moment it
+builds that request, and could say so.
+
+Instead the message names OpenAI, links to OpenAI's dashboard, and describes an
+"Incorrect API key". A customer reading that goes to check their OpenAI account,
+which is not where the problem is and may not be a system they have. The
+misdirection is complete: correct Radware key, correct base URL, correct
+provider segment, correct network, and an error that mentions none of them.
+
+Compounding it, the two failure modes are hard to tell apart from the n8n UI,
+because n8n renders both as a red box:
+
+| Cause | Actual response |
+| --- | --- |
+| Radware key wrong | `500` `{"message":"radware key not found: ..."}` |
+| Provider key missing in the portal | `401` provider error naming OpenAI |
+
+Finding 7 covers why the first is a 500. Together they mean a customer whose
+in-path credential test fails cannot tell from n8n whether the problem is their
+Radware key, their portal configuration, or a Radware outage. Those have three
+different owners.
+
+**Suggested fix:** when the configured provider key is absent, fail before
+calling the provider and return something attributable, for example
+`400 {"message":"No upstream provider API key is configured for this homegrown
+agent. Set Custom Provider and API Key in the Agentic AI Protection portal."}`.
+
+**Suggested addition to the Integration Guide:** the in-path section should
+state plainly that in-path requires the customer's own provider API key entered
+in the portal, and that out-of-path does not. That difference is currently
+visible only in a screenshot of the creation form.

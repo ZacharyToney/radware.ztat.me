@@ -35,7 +35,7 @@ export class RadwareOutOfPathApi implements ICredentialType {
 			required: true,
 			default: '',
 			description:
-				'API key from a Radware homegrown agent created with Out-of-Path Enforcement in https://console.radwarecloud.com/. This is a different agent from the in-path one; an in-path key is not guaranteed to authorise the digester endpoint.',
+				'API key from a Radware homegrown agent in https://console.radwarecloud.com/. A key issued for an in-path agent has been observed to authorise this endpoint too, so try the key you already have before creating a second agent. Unlike in-path, this needs no upstream provider key: the endpoint returns a decision rather than proxying a model call.',
 		},
 		{
 			displayName: 'Base URL',
