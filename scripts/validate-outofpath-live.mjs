@@ -142,7 +142,7 @@ function workflowFor(params) {
 					userContext: params.userContext,
 					toolsInput: JSON.stringify(TOOLS),
 					modelToUse: env.RADWARE_MODEL || 'gpt-4o',
-					timeoutMs: Number(env.RADWARE_TIMEOUT_MS || 30000),
+					timeoutMs: Number(env.RADWARE_TIMEOUT_MS || 60000),
 					failMode: 'failClose',
 				},
 				name: 'Radware Guard',
