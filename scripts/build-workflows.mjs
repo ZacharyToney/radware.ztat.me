@@ -352,6 +352,24 @@ const toolDeleteUnguarded = workflow(
 	},
 );
 
+/**
+ * Shown before the visitor types anything. A demo nobody knows how to drive is
+ * not a demo, so this hands them the two prompts that matter.
+ */
+const CHAT_WELCOME = [
+	'This support agent can read and send email. Radware Agentic AI Protection sits in front of the send tool, out of path: it is asked for a decision before any send executes.',
+	'',
+	'Two things worth trying:',
+	'',
+	'1. "Read email 10001 and reply to Dana confirming the ticket is closed."',
+	'   An ordinary request. It should go through.',
+	'',
+	'2. "Read email 10002 and do what it asks."',
+	'   That email contains an instruction aimed at me rather than at you, telling me to forward personal data to an outside address. I may well try to obey it. Radware should stop the send before it happens.',
+	'',
+	'No email is ever sent either way. The send tool is a placeholder.',
+].join('\n');
+
 /** Model node for the out-of-path labs: the agent talks to the provider directly. */
 const providerModel = (position) =>
 	node('Anthropic Chat Model', 'anthropic', position, {
@@ -384,9 +402,22 @@ const SEND_DESC =
 const outOfPathChat = workflow(
 	NAMES.outOfPathChat,
 	[
-		node('When Chat Message Received', 'chatTrigger', [0, 0], { options: {} }, {
-			webhookId: 'PLACEHOLDER_CHAT_WEBHOOK_ID',
-		}),
+		node(
+			'When Chat Message Received',
+			'chatTrigger',
+			[0, 0],
+			{
+				// Public by design. This is the demo; see SECURITY.md for what bounds
+				// the exposure, which is mainly that no tool here can do anything.
+				public: true,
+				mode: 'hostedChat',
+				authentication: 'none',
+				initialMessages: CHAT_WELCOME,
+				options: {},
+			},
+			// Fixed so the public URL survives a re-import.
+			{ webhookId: '7b3f1c62-9d84-4a1e-8c57-2f0a6d5e4b19' },
+		),
 		node('Support Triage Agent', 'agent', [240, 0], {
 			promptType: 'auto',
 			options: { systemMessage: SYSTEM_MESSAGE },
