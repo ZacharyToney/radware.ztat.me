@@ -103,6 +103,15 @@ export class RadwareGuard implements INodeType {
 				description: 'Model the agent is running, passed through for event attribution',
 			},
 			{
+				displayName: 'Timeout Override (Ms)',
+				name: 'timeoutMs',
+				type: 'number',
+				default: 0,
+				typeOptions: { minValue: 0, maxValue: 120000 },
+				description:
+					'Per-node timeout. 0 uses the credential’s value. Raise it for a guarded action whose check is worth waiting for; the protection service inspects content, so it is slower than a plain API call.',
+			},
+			{
 				displayName: 'Fail Mode',
 				name: 'failMode',
 				type: 'options',
@@ -153,6 +162,8 @@ export class RadwareGuard implements INodeType {
 		for (let i = 0; i < items.length; i++) {
 			const toolName = this.getNodeParameter('toolName', i) as string;
 			const failMode = this.getNodeParameter('failMode', i) as FailMode;
+			const timeoutOverride = Number(this.getNodeParameter('timeoutMs', i, 0)) || 0;
+			const effectiveTimeout = timeoutOverride > 0 ? timeoutOverride : timeoutMs;
 
 			const payload: GuardPayload = {
 				UserPrompt: this.getNodeParameter('userPrompt', i, '') as string,
@@ -167,7 +178,7 @@ export class RadwareGuard implements INodeType {
 
 			const decision = await evaluate(
 				payload,
-				{ baseUrl, endpointPath, timeoutMs, failMode },
+				{ baseUrl, endpointPath, timeoutMs: effectiveTimeout, failMode },
 				transport,
 			);
 

@@ -20,7 +20,8 @@
     "import:workflows": "node scripts/import-workflows.mjs",
     "verify:guard": "node scripts/verify-guard-in-n8n.mjs",
     "invite": "node scripts/invite-reviewers.mjs",
-    "check:key": "node scripts/check-radware-key.mjs"
+    "check:key": "node scripts/check-radware-key.mjs",
+    "validate:outofpath": "node scripts/validate-outofpath-live.mjs"
   },
   "devDependencies": {
     "bcryptjs": "^3.0.3",
