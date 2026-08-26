@@ -1,0 +1,115 @@
+{
+  "name": "Lab Tool - Send Email (Radware Guarded)",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"to\": \"teammate@example.com\",\n  \"subject\": \"Status\",\n  \"body\": \"Ticket 4417 is closed.\",\n  \"user_prompt\": \"Summarise the email and act on it.\",\n  \"retrieved_context\": \"\"\n}"
+      },
+      "name": "When Called by AI Agent",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "toolName": "send_email",
+        "argsInput": "={{ JSON.stringify({ to: $json.to, subject: $json.subject, body: $json.body }) }}",
+        "userPrompt": "={{ $json.user_prompt || \"\" }}",
+        "userIdentifier": "={{ $json.user_identifier || \"n8n-lab-user\" }}",
+        "userContext": "={{ $json.retrieved_context || \"\" }}",
+        "toolsInput": "={{ JSON.stringify([{\"type\":\"function\",\"function\":{\"name\":\"read_email\",\"description\":\"Read an email by ID.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"email_id\":{\"type\":\"string\"}},\"required\":[\"email_id\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"send_email\",\"description\":\"Send an outbound email.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"to\":{\"type\":\"string\"},\"subject\":{\"type\":\"string\"},\"body\":{\"type\":\"string\"}},\"required\":[\"to\",\"subject\",\"body\"]}}}]) }}",
+        "modelToUse": "gpt-4o",
+        "failMode": "failClose"
+      },
+      "name": "Radware Guard",
+      "type": "CUSTOM.radwareGuard",
+      "typeVersion": 1,
+      "position": [
+        230,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Placeholder. Sends nothing, ever.\n// If this runs during a misuse test, the protection did not block, and the\n// output below is the evidence of that.\nreturn items.map((item) => ({\n  json: {\n    status: 'simulated_only',\n    message: 'No email was sent. This is a placeholder tool.',\n    email: {\n      to: item.json.to,\n      subject: item.json.subject,\n      body: item.json.body,\n    },\n  },\n}));\n"
+      },
+      "name": "Simulate Send Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        470,
+        -110
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Radware blocked this call. Return a refusal the agent can read, and surface\n// the Event ID so the decision is traceable in the portal's Security Events.\nreturn items.map((item) => {\n  const r = item.json.radware ?? {};\n  return {\n    json: {\n      status: 'blocked_by_radware',\n      message: 'This action was blocked by Radware Agentic AI Protection and was not performed.',\n      decidedBy: r.decidedBy,\n      eventId: r.eventId ?? null,\n      reason: r.reason ?? null,\n    },\n  };\n});\n"
+      },
+      "name": "Return Refusal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        470,
+        110
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## send_email, guarded out-of-path\n\nThe vendor package is in-path only, and their docs note that an n8n community node cannot globally intercept an agent's tools.\n\nIt does not have to. Making each sensitive tool a sub-workflow puts a deterministic checkpoint ahead of the action, where the model cannot route around it.\n\nFail mode is **failClose**: an outbound send that cannot be checked does not go out.\n\nThe trade-off is honest: this covers the tools you wire it into, not every tool by default.",
+        "height": 280,
+        "width": 560,
+        "color": 4
+      },
+      "name": "Note -40,-320",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -320
+      ]
+    }
+  ],
+  "connections": {
+    "When Called by AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Radware Guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Radware Guard": {
+      "main": [
+        [
+          {
+            "node": "Simulate Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Refusal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

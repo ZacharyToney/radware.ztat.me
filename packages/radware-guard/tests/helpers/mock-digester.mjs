@@ -18,8 +18,13 @@ export const BEHAVIOURS = {
 	hang: { hang: true },
 };
 
-export async function startMockDigester(behaviourName) {
-	const behaviour = BEHAVIOURS[behaviourName];
+/**
+ * @param behaviourName one of BEHAVIOURS
+ * @param host bind address. Defaults to loopback; the in-n8n integration check
+ *   binds 0.0.0.0 so the container can reach it through the host gateway.
+ */
+export async function startMockDigester(behaviourName, { host = '127.0.0.1' } = {}) {
+	let behaviour = BEHAVIOURS[behaviourName];
 	if (!behaviour) throw new Error(`unknown mock behaviour: ${behaviourName}`);
 
 	/** Bodies the mock received, so tests can assert what the node actually sent. */
@@ -51,12 +56,18 @@ export async function startMockDigester(behaviourName) {
 		});
 	});
 
-	await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+	await new Promise((resolve) => server.listen(0, host, resolve));
 	const { port } = server.address();
 
 	return {
-		baseUrl: `http://127.0.0.1:${port}`,
+		port,
+		baseUrl: `http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${port}`,
 		received,
+		/** Switch the response shape without restarting, so one server covers a matrix. */
+		setBehaviour(name) {
+			if (!BEHAVIOURS[name]) throw new Error(`unknown mock behaviour: ${name}`);
+			behaviour = BEHAVIOURS[name];
+		},
 		async close() {
 			server.closeAllConnections();
 			await new Promise((resolve) => server.close(resolve));

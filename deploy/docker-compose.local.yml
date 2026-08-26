@@ -27,3 +27,19 @@ services:
       - ../packages/radware-guard/package.json:/opt/custom-nodes/radware-guard/package.json:ro
     ports:
       - "127.0.0.1:5678:5678"
+
+  # Mock of the Radware out-of-path digester, used by scripts/verify-guard-in-n8n.mjs.
+  # On the compose network rather than the host, so it is reachable from n8n
+  # regardless of whether the host firewall permits container-to-host traffic.
+  # Local only. Nothing in the production stack references it.
+  mock-digester:
+    image: node:24-alpine
+    working_dir: /repo
+    command: ["node", "scripts/mock-digester-server.mjs"]
+    environment:
+      PORT: "8080"
+    volumes:
+      - ..:/repo:ro
+    ports:
+      - "127.0.0.1:8099:8080"
+    mem_limit: 128m

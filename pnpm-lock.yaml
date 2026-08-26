@@ -11,6 +11,9 @@ importers:
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
+      flatted:
+        specifier: ^3.4.4
+        version: 3.4.4
 
   packages/radware-guard:
     devDependencies:

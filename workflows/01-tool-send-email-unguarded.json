@@ -1,0 +1,64 @@
+{
+  "name": "Lab Tool - Send Email (Unguarded Placeholder)",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"to\": \"teammate@example.com\",\n  \"subject\": \"Status\",\n  \"body\": \"Ticket 4417 is closed.\"\n}"
+      },
+      "name": "When Called by AI Agent",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Placeholder. Sends nothing, ever.\n// If this runs during a misuse test, the protection did not block, and the\n// output below is the evidence of that.\nreturn items.map((item) => ({\n  json: {\n    status: 'simulated_only',\n    message: 'No email was sent. This is a placeholder tool.',\n    email: {\n      to: item.json.to,\n      subject: item.json.subject,\n      body: item.json.body,\n    },\n  },\n}));\n"
+      },
+      "name": "Simulate Send Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## send_email, unguarded\n\nUsed by the in-path lab, where enforcement happens at the model endpoint rather than here.\n\nSends nothing. Replace with a real send node only after the protection has been validated, and not on a public instance.",
+        "height": 200,
+        "width": 420,
+        "color": 3
+      },
+      "name": "Note -40,-240",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -240
+      ]
+    }
+  ],
+  "connections": {
+    "When Called by AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Simulate Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
