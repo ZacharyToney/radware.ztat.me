@@ -5,6 +5,7 @@ enforcement modes, with the workflows, the evidence, and a custom node that
 fills the gap Radware's own documentation identifies.
 
 **Try it:** https://radware.ztat.me/webhook/7b3f1c62-9d84-4a1e-8c57-2f0a6d5e4b19/chat
+**Summary:** https://radware.ztat.me/brief/ — architecture, evidence, and the latency data on one page
 **Editor:** https://radware.ztat.me
 **Built against:** `@radware/n8n-nodes-radware-agentic-protection@0.3.2`, n8n 2.36.7, Anthropic Claude Sonnet 4.6
 
