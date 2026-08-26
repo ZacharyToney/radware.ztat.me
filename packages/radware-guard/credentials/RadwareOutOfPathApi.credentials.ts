@@ -55,10 +55,10 @@ export class RadwareOutOfPathApi implements ICredentialType {
 			displayName: 'Timeout (Ms)',
 			name: 'timeoutMs',
 			type: 'number',
-			default: 5000,
-			typeOptions: { minValue: 250, maxValue: 60000 },
+			default: 30000,
+			typeOptions: { minValue: 250, maxValue: 120000 },
 			description:
-				'How long to wait for a protection decision before applying the node’s configured fail mode',
+				'How long to wait for a protection decision before applying the node’s configured fail mode. Measured against the live service, a tool-call check takes 3 to 7 seconds, because it inspects content rather than looking up a rule. A timeout anywhere near that range fails closed intermittently, which is worse than failing closed always: it looks like flakiness rather than policy.',
 		},
 	];
 

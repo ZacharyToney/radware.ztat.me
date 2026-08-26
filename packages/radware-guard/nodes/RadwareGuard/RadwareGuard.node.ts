@@ -51,10 +51,10 @@ export class RadwareGuard implements INodeType {
 				displayName: 'Tool Name',
 				name: 'toolName',
 				type: 'string',
-				required: true,
 				default: '',
 				placeholder: 'send_email',
-				description: 'Name of the tool that is about to run. Radware evaluates the action by name.',
+				description:
+					'Name of the tool that is about to run. Radware evaluates the action by name. Leave empty to evaluate the prompt and context alone, with no specific action in view: the API accepts that, and this node does not restrict what the API allows.',
 			},
 			{
 				displayName: 'Tool Arguments',

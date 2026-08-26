@@ -244,6 +244,10 @@ const toolSendGuarded = workflow(
 			toolsInput:
 				'={{ JSON.stringify([{"type":"function","function":{"name":"read_email","description":"Read an email by ID.","parameters":{"type":"object","properties":{"email_id":{"type":"string"}},"required":["email_id"]}}},{"type":"function","function":{"name":"send_email","description":"Send an outbound email.","parameters":{"type":"object","properties":{"to":{"type":"string"},"subject":{"type":"string"},"body":{"type":"string"}},"required":["to","subject","body"]}}}]) }}',
 			modelToUse: 'gpt-4o',
+			// Measured: a live tool-call check takes 3 to 7 seconds. Set explicitly
+			// here so this workflow behaves the same on a credential created before
+			// the default was corrected.
+			timeoutMs: 30000,
 			failMode: 'failClose',
 		}),
 		node('Simulate Send Email', 'code', [470, -110], {

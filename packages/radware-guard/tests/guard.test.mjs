@@ -143,3 +143,31 @@ test('normalizeDecision returns null rather than guessing', () => {
 		eventId: 'z',
 	});
 });
+
+// Timeout precedence. The credential carries an instance-wide default; a node
+// may need longer for one expensive check. Getting the precedence backwards
+// would silently reinstate the default everywhere.
+test('a per-call timeout is what actually reaches the transport', async () => {
+	const seen = [];
+	const transport = async (_url, _payload, timeoutMs) => {
+		seen.push(timeoutMs);
+		return { statusCode: 200, body: { IsBlocked: false } };
+	};
+
+	await evaluate(payload(), { ...options('http://unused', 'failClose'), timeoutMs: 30000 }, transport);
+	await evaluate(payload(), { ...options('http://unused', 'failClose'), timeoutMs: 2500 }, transport);
+
+	assert.deepEqual(seen, [30000, 2500]);
+});
+
+test('a slow but successful response is not treated as a failure', async () => {
+	// The live service answers in 3 to 7 seconds. Anything that resolves inside
+	// the timeout must count as a real verdict, not a fail-mode default.
+	const transport = async () => {
+		await new Promise((r) => setTimeout(r, 300));
+		return { statusCode: 200, body: { IsBlocked: true, EventId: 'slow-but-real' } };
+	};
+	const decision = await evaluate(payload(), options('http://unused', 'failClose'), transport);
+	assert.equal(decision.decidedBy, 'radware');
+	assert.equal(decision.eventId, 'slow-but-real');
+});

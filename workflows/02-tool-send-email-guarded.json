@@ -23,6 +23,7 @@
         "userContext": "={{ $json.retrieved_context || \"\" }}",
         "toolsInput": "={{ JSON.stringify([{\"type\":\"function\",\"function\":{\"name\":\"read_email\",\"description\":\"Read an email by ID.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"email_id\":{\"type\":\"string\"}},\"required\":[\"email_id\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"send_email\",\"description\":\"Send an outbound email.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"to\":{\"type\":\"string\"},\"subject\":{\"type\":\"string\"},\"body\":{\"type\":\"string\"}},\"required\":[\"to\",\"subject\",\"body\"]}}}]) }}",
         "modelToUse": "gpt-4o",
+        "timeoutMs": 30000,
         "failMode": "failClose"
       },
       "name": "Radware Guard",
