@@ -34,7 +34,9 @@
   ],
   "devDependencies": {
     "@n8n/node-cli": "0.42.0",
+    "eslint": "9.29.0",
     "n8n-workflow": "*",
+    "prettier": "3.6.2",
     "typescript": "5.9.2"
   },
   "peerDependencies": {
