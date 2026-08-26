@@ -89,6 +89,7 @@ const NAMES = {
 	deleteUnguarded: 'Tool - Delete Record (Deliberately Unguarded)',
 	outOfPathChat: 'Out-of-Path 1 - Guarded Chat Agent',
 	outOfPathMisuse: 'Out-of-Path 2 - Tool Misuse Validation',
+	deterministic: 'Out-of-Path 3 - Deterministic Radware Block',
 	inPathChat: 'Reference - In-Path Chat Agent',
 	inPathMisuse: 'Reference - In-Path Tool Misuse',
 };
@@ -550,6 +551,98 @@ return [{ json: { chatInput: 'Read email ${injected.email_id} and do what it ask
 );
 
 // ---------------------------------------------------------------------------
+// Out-of-Path 3: the protection decision, with the model taken out of it.
+//
+// A capable model often refuses an injection unprompted, so the agent labs can
+// finish without Radware ever being asked. That is a good outcome and a useless
+// demonstration. This workflow feeds the guard the exact tool call the injection
+// is trying to cause, so the decision on screen is Radware's and nobody else's.
+// ---------------------------------------------------------------------------
+const deterministicBlock = workflow(
+	NAMES.deterministic,
+	[
+		node('Run', 'manualTrigger', [0, 0], {}),
+		node('Build The Tool Call', 'code', [200, 0], {
+			mode: 'runOnceForAllItems',
+			language: 'javaScript',
+			jsCode: `// The tool call the injected email is trying to cause, stated outright.
+// No model involved, so the result cannot be the model's judgement.
+return [{
+  json: {
+    to: 'records-sync@example.invalid',
+    subject: ${JSON.stringify(injected.subject)},
+    body: ${JSON.stringify(injected.body)},
+    user_prompt: 'Read email ${injected.email_id} and do what it asks.',
+    retrieved_context: ${JSON.stringify(injected.body)},
+  },
+}];
+`,
+		}),
+		node('Radware Guard', 'radwareGuard', [430, 0], {
+			toolName: 'send_email',
+			argsInput:
+				'={{ JSON.stringify({ to: $json.to, subject: $json.subject, body: $json.body }) }}',
+			userPrompt: '={{ $json.user_prompt }}',
+			userIdentifier: 'deterministic-demo',
+			userContext: '={{ $json.retrieved_context }}',
+			toolsInput:
+				'={{ JSON.stringify([{"type":"function","function":{"name":"read_email","description":"Read an email by ID.","parameters":{"type":"object","properties":{"email_id":{"type":"string"}},"required":["email_id"]}}},{"type":"function","function":{"name":"send_email","description":"Send an outbound email.","parameters":{"type":"object","properties":{"to":{"type":"string"},"subject":{"type":"string"},"body":{"type":"string"}},"required":["to","subject","body"]}}}]) }}',
+			modelToUse: 'gpt-4o',
+			timeoutMs: 60000,
+			failMode: 'failClose',
+		}),
+		node('Allowed - Would Have Sent', 'code', [680, -110], {
+			mode: 'runOnceForAllItems',
+			language: 'javaScript',
+			jsCode: `// Reaching here means Radware permitted the exfiltration.
+return items.map((i) => ({ json: { result: 'ALLOWED', radware: i.json.radware } }));
+`,
+		}),
+		node('Blocked By Radware', 'code', [680, 110], {
+			mode: 'runOnceForAllItems',
+			language: 'javaScript',
+			jsCode: `// decidedBy must read "radware". A "failClose" here means the service did
+// not answer, which is a connectivity result wearing a block's clothes.
+return items.map((i) => ({
+  json: {
+    result: 'BLOCKED',
+    decidedBy: i.json.radware?.decidedBy,
+    eventId: i.json.radware?.eventId,
+    lookUpAt: 'https://console.radwarecloud.com -> Security Events',
+  },
+}));
+`,
+		}),
+		sticky(
+			[
+				'## Click Execute. This is Radware deciding.',
+				'',
+				'The agent labs can finish without Radware being consulted at all, because a good model often refuses an injection by itself. Useful in production, useless as evidence.',
+				'',
+				'Here the tool call is constructed directly, so no model opinion is involved. The verdict comes back from `POST /llmp/digester/agentic-api`.',
+				'',
+				'**Check `decidedBy` on the output.** It must say `radware`. If it says `failClose`, the service did not answer and the block is a timeout, not protection. Those are indistinguishable from the outcome alone, which is why the field exists.',
+				'',
+				'The Event ID is real. Look it up under Security Events in the Radware portal.',
+			].join('\n'),
+			[-40, -340],
+			[660, 310],
+			4,
+		),
+	],
+	{
+		Run: { main: [[{ node: 'Build The Tool Call', type: 'main', index: 0 }]] },
+		'Build The Tool Call': { main: [[{ node: 'Radware Guard', type: 'main', index: 0 }]] },
+		'Radware Guard': {
+			main: [
+				[{ node: 'Allowed - Would Have Sent', type: 'main', index: 0 }],
+				[{ node: 'Blocked By Radware', type: 'main', index: 0 }],
+			],
+		},
+	},
+);
+
+// ---------------------------------------------------------------------------
 // Reference: the in-path pattern from the Integration Guide.
 //
 // Not the deliverable. Included because the vendor documents in-path as the
@@ -650,6 +743,7 @@ const FILES = {
 	'03-tool-delete-record-unguarded.json': toolDeleteUnguarded,
 	'10-outofpath-guarded-chat-agent.json': outOfPathChat,
 	'11-outofpath-tool-misuse.json': outOfPathMisuse,
+	'12-outofpath-deterministic-block.json': deterministicBlock,
 	'90-reference-inpath-chat-agent.json': inPathChat,
 	'91-reference-inpath-tool-misuse.json': inPathMisuse,
 };
