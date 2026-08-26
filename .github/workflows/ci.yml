@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # gitleaks needs history to scan past commits, not just the tip.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --filter @ztat/n8n-nodes-radware-guard lint
+
+      - name: Build and test the guard node
+        run: pnpm --filter @ztat/n8n-nodes-radware-guard test
+
+      # The workflow JSON is generated from the fixtures. If someone edits a
+      # fixture without regenerating, the payload under test stops matching the
+      # payload documented, silently.
+      - name: Workflow JSON matches the fixtures
+        run: pnpm check:workflows
+
+      - name: Production image builds
+        run: docker build -f deploy/Dockerfile.n8n -t radware-n8n-lab/n8n:ci .
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Scan for committed secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

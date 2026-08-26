@@ -1,0 +1,19 @@
+[extend]
+useDefault = true
+
+# The fixtures exist to trip detection. They contain the published Visa test PAN
+# and an obviously-fake Radware key shape, both on purpose, and both documented
+# in fixtures/README.md. Allowlisting the paths rather than the patterns keeps
+# the rules live everywhere else in the repo.
+[[rules]]
+id = "placeholder"
+description = "placeholder so [[rules]] is valid when only allowlists are needed"
+regex = '''$^'''
+
+[allowlist]
+description = "Labeled, inert test material"
+paths = [
+  '''fixtures/.*''',
+  '''packages/radware-guard/tests/.*''',
+  '''deploy/\.env\.example''',
+]
