@@ -147,3 +147,49 @@ being withheld.
 The gap between "cannot cover everything" and "ships nothing" is where this
 repo's contribution sits. See `docs/out-of-path.md` for the pattern and its
 honest limits.
+
+## 7. An unrecognised API key is reported as HTTP 500
+
+**Severity: medium. Every client in the path misreports it.**
+
+Sending a key the service does not recognise returns:
+
+```
+HTTP/1.1 500 Internal Server Error
+{"message":"radware key not found: sk-rdwr-..."}
+```
+
+This is an authentication failure. The correct status is `401 Unauthorized`,
+and `500` is reserved for the server having failed at something that is not the
+caller's doing. Reproduced on `/v1/openai/models`,
+`/v1/openai/chat/completions`, and `/llmp/digester/agentic-api`; all three
+behave the same way.
+
+The consequence is not cosmetic. n8n's credential test surfaces the status, so a
+customer with a mistyped or stale key sees:
+
+> Couldn't connect with these settings
+> **Internal Server Error**
+
+That sentence points at Radware having an outage. It sends the customer to check
+their network, their proxy, and their egress rules, when the actual problem is a
+key they can fix in thirty seconds. We lost time to exactly this before testing
+the endpoint directly with a deliberately invalid key and seeing the real message
+underneath.
+
+Two further notes:
+
+- The response **echoes the submitted key back in the error body**. That key then
+  lands in whatever logs sit between the client and the service. Even an invalid
+  key is a credential-shaped secret, and a mistyped one is usually one character
+  away from a valid one. Returning it is not necessary to explain the failure.
+- `GET /v1/<provider>/models` returns the same 500 for an unrecognised key. Since
+  the n8n credential test targets `/models`, that endpoint's behaviour determines
+  whether a correct credential can be confirmed in the UI at all.
+
+**Suggested fix:** return `401` with a body that names the problem and does not
+echo the key, for example `{"message":"API key not recognised"}`.
+
+`scripts/check-radware-key.mjs` in this repo tests a key against all three
+endpoints and translates the 500 back into a plain answer. It reads the key from
+stdin or the environment rather than argv, and redacts it from output.
