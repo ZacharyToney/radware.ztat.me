@@ -1,0 +1,14 @@
+packages:
+  - 'packages/*'
+
+# Build scripts are opt-in in pnpm 10+, and an unanswered prompt fails CI.
+# None of these are needed to compile or test this package: they are native
+# modules pulled in transitively by n8n tooling that is never executed here
+# (isolated-vm, ssh2, cpu-features) or ones that ship prebuilt binaries anyway
+# (unrs-resolver). Denied explicitly so `pnpm install` is reproducible.
+allowBuilds:
+  cpu-features: false
+  eslint-plugin-n8n-nodes-base: false
+  isolated-vm: false
+  ssh2: false
+  unrs-resolver: false

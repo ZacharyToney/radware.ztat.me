@@ -1,0 +1,53 @@
+{
+  "name": "@ztat/n8n-nodes-radware-guard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Out-of-path Radware Agentic AI Protection guard node for n8n. Gates a single tool call through the Radware agentic API before it executes.",
+  "license": "MIT",
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "radware",
+    "agentic-ai",
+    "ai-security",
+    "prompt-injection"
+  ],
+  "scripts": {
+    "build": "n8n-node build",
+    "dev": "n8n-node dev",
+    "lint": "n8n-node lint",
+    "lint:fix": "n8n-node lint --fix",
+    "test": "pnpm build && node --test tests/*.test.mjs"
+  },
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "strict": true,
+    "credentials": [
+      "dist/credentials/RadwareOutOfPathApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/RadwareGuard/RadwareGuard.node.js"
+    ]
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "@n8n/node-cli": "0.42.0",
+    "n8n-workflow": "*",
+    "typescript": "5.9.2"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  },
+  "homepage": "https://github.com/ZacharyToney/radware.ztat.me#readme",
+  "author": {
+    "name": "Zachary Toney",
+    "email": "zach@ztat.me"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZacharyToney/radware.ztat.me.git",
+    "directory": "packages/radware-guard"
+  }
+}

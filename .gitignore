@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.n8n/
+.DS_Store
+*.log
+deploy/caddy_data/
+deploy/caddy_config/
+deploy/n8n_data/
+deploy/pg_data/
+reports/*-raw-*.json

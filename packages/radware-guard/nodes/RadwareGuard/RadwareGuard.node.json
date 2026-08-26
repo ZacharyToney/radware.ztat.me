@@ -1,0 +1,18 @@
+{
+	"node": "@ztat/n8n-nodes-radware-guard.radwareGuard",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Utility"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://github.com/ZacharyToney/radware.ztat.me/blob/main/docs/out-of-path.md#credential"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/ZacharyToney/radware.ztat.me/blob/main/docs/out-of-path.md"
+			}
+		]
+	}
+}
