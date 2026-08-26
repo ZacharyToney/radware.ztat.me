@@ -30,5 +30,11 @@
 		}
 	}
 
+	# Site-local routes that are deliberately not in version control: one-off
+	# pages, evidence briefs, anything tied to this deployment rather than to the
+	# project. Drop a .caddy file into deploy/caddy-local/ on the host. The glob
+	# matching nothing is fine, so a fresh clone needs no extra setup.
+	import /etc/caddy/local/*.caddy
+
 	reverse_proxy n8n:5678
 }

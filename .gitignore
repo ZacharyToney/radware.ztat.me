@@ -13,3 +13,7 @@ deploy/caddy_config/
 deploy/n8n_data/
 deploy/pg_data/
 reports/*-raw-*.json
+
+# Host-local Caddy routes and static pages: deployment-specific, not project content
+deploy/caddy-local/
+deploy/site/

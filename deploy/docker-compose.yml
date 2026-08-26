@@ -21,6 +21,8 @@ services:
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:?set LETSENCRYPT_EMAIL in .env}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy-local:/etc/caddy/local:ro
+      - ./site:/srv/site:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
