@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Lets a run be started by hand from the Actions tab, which is the only way
+  # to re-run CI when a push does not trigger one.
+  workflow_dispatch:
 
 jobs:
   build:
