@@ -194,14 +194,20 @@ echo the key, for example `{"message":"API key not recognised"}`.
 endpoints and translates the 500 back into a plain answer. It reads the key from
 stdin or the environment rather than argv, and redacts it from output.
 
-## 8. An in-path agent with no provider key fails as if it were the customer's fault
+## 8. Using a key on the wrong enforcement path fails as if it were the customer's fault
 
 **Severity: medium. Sends the customer to the wrong system entirely.**
 
-An in-path homegrown agent proxies to an upstream provider using a provider API
-key supplied in the portal. When that field is empty, the agent still
-authenticates the Radware key correctly, then calls the provider with an empty
-credential. What the customer sees is the provider's error relayed verbatim:
+*Corrected after the fact: an earlier version of this finding asserted the cause
+was an empty provider-key field in the portal. That was an inference from a
+single symptom. The key in question was issued for an out-of-path agent, so the
+likelier cause is simply that it has no in-path provider configuration to use.
+The measured behaviour below is unchanged, and it is the part that matters.*
+
+Sending a key to `/v1/<provider>/*` when it has no usable in-path provider
+configuration does not produce an error about that. The Radware key
+authenticates, the request is relayed to the provider with an empty credential,
+and what comes back is the provider's own error verbatim:
 
 ```
 GET /v1/openai/models
@@ -210,8 +216,8 @@ HTTP 401
  at https://platform.openai.com/account/api-keys.", ...}}
 ```
 
-Note the empty string. Radware knows the provider key is blank at the moment it
-builds that request, and could say so.
+Note the empty string. Radware knows the outbound credential is empty at the
+moment it builds that request, and could say so instead of relaying it.
 
 Instead the message names OpenAI, links to OpenAI's dashboard, and describes an
 "Incorrect API key". A customer reading that goes to check their OpenAI account,
@@ -225,22 +231,23 @@ because n8n renders both as a red box:
 | Cause | Actual response |
 | --- | --- |
 | Radware key wrong | `500` `{"message":"radware key not found: ..."}` |
-| Provider key missing in the portal | `401` provider error naming OpenAI |
+| Key has no in-path provider configuration | `401` provider error naming OpenAI |
 
 Finding 7 covers why the first is a 500. Together they mean a customer whose
 in-path credential test fails cannot tell from n8n whether the problem is their
 Radware key, their portal configuration, or a Radware outage. Those have three
 different owners.
 
-**Suggested fix:** when the configured provider key is absent, fail before
-calling the provider and return something attributable, for example
-`400 {"message":"No upstream provider API key is configured for this homegrown
-agent. Set Custom Provider and API Key in the Agentic AI Protection portal."}`.
+**Suggested fix:** when the outbound provider credential would be empty, fail
+before calling the provider and return something attributable, for example
+`400 {"message":"This key has no in-path provider configuration. Check that the
+homegrown agent uses In-Path Enforcement and has a Custom Provider API key set."}`.
 
-**Suggested addition to the Integration Guide:** the in-path section should
-state plainly that in-path requires the customer's own provider API key entered
-in the portal, and that out-of-path does not. That difference is currently
-visible only in a screenshot of the creation form.
+**Suggested addition to the Integration Guide:** state plainly that in-path
+requires the customer's own provider API key entered in the portal, that
+out-of-path does not, and that a key issued for one enforcement mode will not
+behave usefully on the other. Right now that difference is visible only in a
+screenshot of the creation form, and the failure mode gives no hint of it.
 
 ## 9. Out-of-path decision latency spans three orders of magnitude
 

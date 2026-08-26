@@ -11,11 +11,13 @@ fills the gap Radware's own documentation identifies.
 
 ## In sixty seconds
 
-Radware ships an n8n community node that works **in-path**: an AI Agent talks to
-`Radware Chat Model` instead of to OpenAI, so every model call is inspected.
-That is the recommended pattern and it is reproduced here exactly as documented.
+The brief was one line: an API key, and *"Out of path Secure AI agent"*. So
+out-of-path is the deliverable here, not a bonus.
 
-Radware's own docs then say something more interesting:
+That is the harder half of the product. Radware ships an n8n community node, but
+it works **in-path**: an AI Agent talks to `Radware Chat Model` instead of to its
+provider, so every model call is inspected. Nothing equivalent ships for
+out-of-path, and Radware's own docs explain why:
 
 > Out-of-path explicit guard nodes are not part of the public n8n package
 > because they cannot provide full one-go AI Agent protection in n8n.
@@ -82,14 +84,19 @@ SECURITY.md               threat model and blast radius
 
 ### The workflows
 
+Numbering reflects priority. `1x` is the deliverable; `9x` is reference material
+a reviewer can skip.
+
 | File | What it is |
 | --- | --- |
 | `00-tool-read-email` | Returns untrusted content. One benign email, one carrying an indirect injection. Nothing is sanitised on the way out; that is the test. |
 | `01-tool-send-email-unguarded` | No-op placeholder. Sends nothing, ever. |
 | `02-tool-send-email-guarded` | Same placeholder behind `Radware Guard`, fail mode `failClose`. |
-| `10-lab-inpath-chat-agent` | The public demo. Radware Chat Model as the only model endpoint. |
-| `11-lab-inpath-tool-misuse` | Deterministic behavioural test. Both tools advertised, as the vendor validation guide requires. |
-| `12-lab-outofpath-guarded-agent` | Same attack, decision moved to the tool boundary. |
+| `03-tool-delete-record-unguarded` | Deliberately unguarded. Demonstrates the coverage boundary instead of describing it. |
+| **`10-outofpath-guarded-chat-agent`** | **The deliverable.** Live chat agent, provider model direct, Radware called at the tool boundary. |
+| `11-outofpath-tool-misuse` | Deterministic validation. Guarded `send_email` beside unguarded `delete_record`, on purpose. |
+| `90-reference-inpath-chat-agent` | The vendor's in-path pattern, for comparison. Not the deliverable. |
+| `91-reference-inpath-tool-misuse` | In-path behavioural test. Not exercised; see finding 8. |
 
 ## Running it
 

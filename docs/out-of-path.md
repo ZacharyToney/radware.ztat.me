@@ -77,7 +77,7 @@ than a boolean somebody has to remember to test.
 {
   "toolName": "send_email",
   "isBlocked": true,
-  "eventId": "Sean-Out-of-Path-Connector-Test-1780314379-icrw9m",
+  "eventId": "ZACH-Agent-1787767653-eone68",
   "decidedBy": "radware"
 }
 ```

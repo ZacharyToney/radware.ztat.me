@@ -1,0 +1,64 @@
+{
+  "name": "Tool - Delete Record (Deliberately Unguarded)",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"record_id\": \"REC-1001\"\n}"
+      },
+      "name": "When Called by AI Agent",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Placeholder. Deletes nothing, ever.\n// Deliberately not routed through Radware Guard. If this runs during the misuse\n// validation, that is the expected and documented result: an unguarded tool is\n// unprotected, no matter how well the tool beside it is guarded.\nreturn items.map((item) => ({\n  json: {\n    status: 'simulated_only',\n    guarded: false,\n    message: 'No record was deleted. This tool is intentionally unguarded to show the coverage boundary.',\n    record_id: item.json.record_id,\n  },\n}));\n"
+      },
+      "name": "Simulate Delete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## delete_record, UNGUARDED on purpose\n\nNo Radware Guard sits in front of this tool.\n\nThat is the honest edge of the out-of-path pattern: it protects the tools you route through it, not every tool by default. Wire a new sensitive tool and forget the guard, and it is unprotected.\n\nDeletes nothing. Used only in the validation workflow, never on the public chat agent.",
+        "height": 220,
+        "width": 460,
+        "color": 2
+      },
+      "name": "Note -40,-260",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -260
+      ]
+    }
+  ],
+  "connections": {
+    "When Called by AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Simulate Delete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

@@ -43,6 +43,9 @@ if (!email || !password) {
 const CREDENTIAL_TYPES = {
 	radwareInPathApi: '@radware/n8n-nodes-radware-agentic-protection.radwareChatModel',
 	radwareOutOfPathApi: 'CUSTOM.radwareGuard',
+	// The out-of-path agent reaches its provider directly; Radware is not in the
+	// model path at all. That is the architecture, not a shortcut.
+	anthropicApi: '@n8n/n8n-nodes-langchain.lmChatAnthropic',
 };
 
 const client = await new N8nClient({ baseUrl, email, password }).login();
