@@ -1,5 +1,5 @@
 {
-  "name": "n8n-radware-agentic-lab",
+  "name": "radware-ztat-me",
   "version": "0.1.0",
   "private": true,
   "description": "Reference deployment of Radware Agentic AI Protection for n8n: in-path enforcement plus an out-of-path guard node for per-tool interception",
@@ -18,7 +18,8 @@
     "build:workflows": "node scripts/build-workflows.mjs",
     "check:workflows": "node scripts/build-workflows.mjs --check",
     "import:workflows": "node scripts/import-workflows.mjs",
-    "verify:guard": "node scripts/verify-guard-in-n8n.mjs"
+    "verify:guard": "node scripts/verify-guard-in-n8n.mjs",
+    "invite": "node scripts/invite-reviewers.mjs"
   },
   "devDependencies": {
     "bcryptjs": "^3.0.3",

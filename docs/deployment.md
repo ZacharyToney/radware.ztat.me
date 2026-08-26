@@ -50,8 +50,8 @@ Log out and back in so the `docker` group applies.
 ## 4. Configure
 
 ```bash
-git clone <repo-url> ~/n8n-radware-agentic-lab
-cd ~/n8n-radware-agentic-lab
+git clone git@github.com:ZacharyToney/radware.ztat.me.git ~/radware.ztat.me
+cd ~/radware.ztat.me
 cp deploy/.env.example deploy/.env
 ```
 
@@ -115,6 +115,29 @@ N8N_URL=https://radware.ztat.me N8N_PASSWORD='...' pnpm import:workflows
 ```
 
 Activate `Lab 1 - In-Path Chat Agent` in the UI and copy its public chat URL.
+
+## 9. Reviewer logins
+
+```bash
+N8N_URL=https://radware.ztat.me N8N_PASSWORD='...' \
+  pnpm invite reviewer-one@example.com reviewer-two@example.com
+```
+
+Invites are issued as **admin**, and that needs saying out loud. n8n's Community
+edition has no workflow sharing: per n8n's documentation, only the instance
+owner and the creator can access a workflow. A `member` account here would log
+in to an empty workspace, so admin is the only instance role that makes a review
+possible.
+
+An admin can view and edit every workflow, use every stored credential, and add
+or remove users. n8n never returns credential values to the browser, but an
+admin can build a workflow that *uses* one, so an admin invite is effectively
+handing over use of the Radware and provider keys. Revoke the accounts when the
+review is done, and rotate the keys if the instance outlives it.
+
+No SMTP is configured, so nothing is emailed. The command prints one signup link
+per person. Those links set a password on first use: treat them as credentials
+and send them over a channel you would send a password over.
 
 ## 8. Before sharing the link
 
